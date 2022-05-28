@@ -7,6 +7,10 @@ from typing import Optional, Union, List, Dict, Tuple
 import torch
 import collections
 import random
+import os
+os.environ['CUDA_LAUNCH_BLOCKING'] = "1"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+
 
 from datasets import load_dataset
 
@@ -17,7 +21,7 @@ from transformers import (
     AutoConfig,
     AutoModelForMaskedLM,
     AutoModelForSequenceClassification,
-    AutoTokenizer,
+    BertweetTokenizer,
     DataCollatorForLanguageModeling,
     DataCollatorWithPadding,
     HfArgumentParser,
@@ -70,7 +74,7 @@ class ModelArguments:
         metadata={"help": "Where do you want to store the pretrained models downloaded from huggingface.co"},
     )
     use_fast_tokenizer: bool = field(
-        default=True,
+        default=False,
         metadata={"help": "Whether to use one of the fast tokenizer (backed by the tokenizers library) or not."},
     )
     model_revision: str = field(
@@ -336,10 +340,12 @@ def main():
         "revision": model_args.model_revision,
         "use_auth_token": True if model_args.use_auth_token else None,
     }
+    print('tokenizer_kwargs:', tokenizer_kwargs)
     if model_args.tokenizer_name:
-        tokenizer = AutoTokenizer.from_pretrained(model_args.tokenizer_name, **tokenizer_kwargs)
+        tokenizer = BertweetTokenizer.from_pretrained(model_args.tokenizer_name, **tokenizer_kwargs)
     elif model_args.model_name_or_path:
-        tokenizer = AutoTokenizer.from_pretrained(model_args.model_name_or_path, **tokenizer_kwargs)
+        print(model_args.model_name_or_path)
+        tokenizer = BertweetTokenizer.from_pretrained(model_args.model_name_or_path, **tokenizer_kwargs)
     else:
         raise ValueError(
             "You are instantiating a new tokenizer from scratch. This is not supported by this script."
@@ -347,7 +353,7 @@ def main():
         )
 
     if model_args.model_name_or_path:
-        if 'roberta' in model_args.model_name_or_path:
+        if 'bertweet' in model_args.model_name_or_path:
             model = RobertaForCL.from_pretrained(
                 model_args.model_name_or_path,
                 from_tf=bool(".ckpt" in model_args.model_name_or_path),
@@ -358,6 +364,7 @@ def main():
                 model_args=model_args                  
             )
         elif 'bert' in model_args.model_name_or_path:
+            print('Yes I am Bert.')
             model = BertForCL.from_pretrained(
                 model_args.model_name_or_path,
                 from_tf=bool(".ckpt" in model_args.model_name_or_path),

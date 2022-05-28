@@ -4,9 +4,10 @@
 # If you want to train it with multiple GPU cards, see "run_sup_example.sh"
 # about how to use PyTorch's distributed data parallel.
 
+
 python train.py \
-    --model_name_or_path bert-base-uncased \
-    --train_file data/wiki1m_for_simcse.txt \
+    --model_name_or_path vinai/bertweet-base \
+    --train_file data/emoji120k_corpus.txt \
     --output_dir result/my-unsup-simcse-bert-base-uncased \
     --num_train_epochs 1 \
     --per_device_train_batch_size 64 \
@@ -24,3 +25,8 @@ python train.py \
     --do_eval \
     --fp16 \
     "$@"
+
+
+# 1. 전처리 (필요없는 토큰제거)
+# 2. BertTweet 바꿔서 돌린다.
+# 3. EvalSet Emoji.
