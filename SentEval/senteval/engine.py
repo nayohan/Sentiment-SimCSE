@@ -21,6 +21,7 @@ from senteval.mrpc import MRPCEval
 from senteval.sts import STS12Eval, STS13Eval, STS14Eval, STS15Eval, STS16Eval, STSBenchmarkEval, SICKRelatednessEval, STSBenchmarkFinetune
 from senteval.sst import SSTEval
 from senteval.rank import ImageCaptionRetrievalEval
+from senteval.emoji import EmojiEval
 from senteval.probing import *
 
 class SE(object):
@@ -51,7 +52,9 @@ class SE(object):
                            'STS14', 'STS15', 'STS16',
                            'Length', 'WordContent', 'Depth', 'TopConstituents',
                            'BigramShift', 'Tense', 'SubjNumber', 'ObjNumber',
-                           'OddManOut', 'CoordinationInversion', 'SICKRelatedness-finetune', 'STSBenchmark-finetune', 'STSBenchmark-fix']
+                           'OddManOut', 'CoordinationInversion', 'SICKRelatedness-finetune', 'STSBenchmark-finetune', 'STSBenchmark-fix',
+                           'EMOJI'
+                           ]
 
     def eval(self, name):
         # evaluate on evaluation [name], either takes string or list of strings
@@ -98,6 +101,8 @@ class SE(object):
             self.evaluation = eval(name + 'Eval')(tpath + '/downstream/STS/' + fpath, seed=self.params.seed)
         elif name == 'ImageCaptionRetrieval':
             self.evaluation = ImageCaptionRetrievalEval(tpath + '/downstream/COCO', seed=self.params.seed)
+        elif name == 'EMOJI':
+            self.evaluation = EmojiEval(tpath + '/downstream/EMOJI', seed=self.params.seed)
 
         # Probing Tasks
         elif name == 'Length':

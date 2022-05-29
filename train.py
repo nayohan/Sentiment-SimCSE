@@ -21,7 +21,7 @@ from transformers import (
     AutoConfig,
     AutoModelForMaskedLM,
     AutoModelForSequenceClassification,
-    BertweetTokenizer,
+    AutoTokenizer,
     DataCollatorForLanguageModeling,
     DataCollatorWithPadding,
     HfArgumentParser,
@@ -342,10 +342,10 @@ def main():
     }
     print('tokenizer_kwargs:', tokenizer_kwargs)
     if model_args.tokenizer_name:
-        tokenizer = BertweetTokenizer.from_pretrained(model_args.tokenizer_name, **tokenizer_kwargs)
+        tokenizer = AutoTokenizer.from_pretrained(model_args.tokenizer_name, **tokenizer_kwargs)
     elif model_args.model_name_or_path:
         print(model_args.model_name_or_path)
-        tokenizer = BertweetTokenizer.from_pretrained(model_args.model_name_or_path, **tokenizer_kwargs)
+        tokenizer = AutoTokenizer.from_pretrained(model_args.model_name_or_path, **tokenizer_kwargs)
     else:
         raise ValueError(
             "You are instantiating a new tokenizer from scratch. This is not supported by this script."
