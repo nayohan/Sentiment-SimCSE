@@ -89,7 +89,6 @@ from filelock import FileLock
 logger = logging.get_logger(__name__)
 
 class CLTrainer(Trainer):
-
     def evaluate(
         self,
         eval_dataset: Optional[Dataset] = None,
@@ -121,18 +120,25 @@ class CLTrainer(Trainer):
         params['classifier'] = {'nhid': 0, 'optim': 'rmsprop', 'batch_size': 128,
                                             'tenacity': 3, 'epoch_size': 2}
 
+        # if not self.args.metric_for_best_model=="contrastive_loss":
         se = senteval.engine.SE(params, batcher, prepare)
-        tasks = ['STSBenchmark', 'SICKRelatedness']
+        tasks = ['STSBenchmark', 'SICKRelatedness', 'EMOJI']
         if eval_senteval_transfer or self.args.eval_transfer:
             tasks = ['STSBenchmark', 'SICKRelatedness', 'EMOJI', 'MR', 'CR', 'MPQA', 'SST2', 'TREC', 'MRPC']
 
         self.model.eval()
         results = se.eval(tasks)
-        
+
         stsb_spearman = results['STSBenchmark']['dev']['spearman'][0]
         sickr_spearman = results['SICKRelatedness']['dev']['spearman'][0]
-
-        metrics = {"eval_stsb_spearman": stsb_spearman, "eval_sickr_spearman": sickr_spearman, "eval_avg_sts": (stsb_spearman + sickr_spearman) / 2} 
+        train_cotrastive_loss = self.args.train_contrastive_loss
+        dev_emoji_acc = results['EMOJI']['devacc']
+        test_emoji_acc = results['EMOJI']['acc']
+        # metrics = { "eval_contrastive_loss": train_cotrastive_loss} 
+        
+        logger.info(f"dev_emoji_acc: {dev_emoji_acc}, test_emoji_acc: {test_emoji_acc}")
+        metrics = {"eval_stsb_spearman": stsb_spearman, "eval_sickr_spearman": sickr_spearman, "eval_avg_sts": (stsb_spearman + sickr_spearman) / 2, \
+                   "eval_contrastive_loss": train_cotrastive_loss, "dev_emoji_acc": dev_emoji_acc, "test_emoji_acc": {test_emoji_acc}} 
         if eval_senteval_transfer or self.args.eval_transfer:
             avg_transfer = 0
             for task in ['EMOJI', 'MR', 'CR', 'MPQA', 'SST2', 'TREC', 'MRPC']:
@@ -140,6 +146,7 @@ class CLTrainer(Trainer):
                 metrics['eval_{}'.format(task)] = results[task]['devacc']
             avg_transfer /= 7
             metrics['eval_avg_transfer'] = avg_transfer
+        # else:
 
         self.log(metrics)
         return metrics
@@ -162,6 +169,9 @@ class CLTrainer(Trainer):
             metric_value = metrics[metric_to_check]
 
             operator = np.greater if self.args.greater_is_better else np.less
+            if metric_to_check=="eval_contrastive_loss":
+                logger.info(f"train_contrastive_loss: {metric_value}")
+                operator = np.less
             if (
                 self.state.best_metric is None
                 or self.state.best_model_checkpoint is None
@@ -377,7 +387,7 @@ class CLTrainer(Trainer):
         logger.info(f"  Total train batch size (w. parallel, distributed & accumulation) = {total_train_batch_size}")
         logger.info(f"  Gradient Accumulation steps = {self.args.gradient_accumulation_steps}")
         logger.info(f"  Total optimization steps = {max_steps}")
-
+        logger.info(f"{self.args}")
         self.state.epoch = 0
         start_time = time.time()
         epochs_trained = 0
@@ -423,7 +433,6 @@ class CLTrainer(Trainer):
         self._globalstep_last_logged = 0
         self._total_flos = self.state.total_flos
         model.zero_grad()
-
         self.control = self.callback_handler.on_train_begin(self.args, self.state, self.control)
 
         # Skip the first epochs_trained epochs to get the random state of the dataloader at the right point.
@@ -449,6 +458,7 @@ class CLTrainer(Trainer):
             inputs = None
             last_inputs = None
             for step, inputs in enumerate(epoch_iterator):
+                #print(step, inputs)
                 # Skip past any already trained steps if resuming training
                 if steps_trained_in_current_epoch > 0:
                     steps_trained_in_current_epoch -= 1
@@ -464,6 +474,8 @@ class CLTrainer(Trainer):
                 else:
                     tr_loss += self.training_step(model, inputs)
                 self._total_flos += self.floating_point_ops(inputs)
+                self.args.train_contrastive_loss = tr_loss.item()
+                #logger.info(f"tr_loss: {tr_loss.item()}")
 
                 if (step + 1) % self.args.gradient_accumulation_steps == 0 or (
                     # last step in epoch but step is always smaller than gradient_accumulation_steps

@@ -198,6 +198,10 @@ class OurTrainingArguments(TrainingArguments):
         default=False,
         metadata={"help": "Evaluate transfer task dev sets (in validation)."}
     )
+    train_contrastive_loss: float = field(
+        default=0.0,
+        metadata={"help": "Using train contrastive loss when save checkpoint"}
+    )
 
     @cached_property
     @torch_required
